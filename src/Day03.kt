@@ -35,15 +35,11 @@ fun extractMulMatches(input: String): List<Pair<Long, Long>> {
 }
 
 fun main() {
+    fun part1(input: List<String>): Long =
+        input.sumOf { extractMulMatches(it).sumOf { (x, y) -> (x * y) } }
 
-    fun part1(input: List<String>): Long {
-        return input.sumOf { extractMulMatches(it).sumOf { (x, y) -> (x * y) } }
-    }
-
-    fun part2(input: List<String>): Long {
-        val sanitized = removeDeactivatedPortions(input.joinToString())
-        return extractMulMatches(sanitized).sumOf { (x, y) -> (x * y) }
-    }
+    fun part2(input: List<String>): Long =
+        extractMulMatches(removeDeactivatedPortions(input.joinToString())).sumOf { (x, y) -> (x * y) }
 
     val testInput = readInput("Day03_test")
     part1(testInput).println()
