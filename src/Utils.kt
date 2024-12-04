@@ -146,3 +146,18 @@ fun splitOnEmptyLine(input: List<String>): List<List<String>> =
         }
         acc
     }
+
+/**
+ * Extension function on list to have 2D windowed lists.
+ */
+fun <T> List<List<T>>.windowed2D(size: Int): List<List<List<T>>> {
+    if (size <= 0 || size > this.size || this.any { it.size < size }) return emptyList()
+
+    return (0..this.size - size).flatMap { rowStart ->
+        (0..this[0].size - size).map { colStart ->
+            (0 until size).map { rowOffset ->
+                this[rowStart + rowOffset].subList(colStart, colStart + size)
+            }
+        }
+    }
+}

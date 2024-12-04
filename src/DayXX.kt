@@ -1,5 +1,6 @@
 fun main() {
     fun part1(input: List<String>): Int {
+        input.println()
         return input.size
     }
 
