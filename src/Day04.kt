@@ -1,3 +1,4 @@
+// TODO refactor and move to extension functions
 fun getPrimaryDiagonals(grid: List<String>): List<String> {
     val rows = grid.size
     val cols = grid.firstOrNull()?.length ?: 0
