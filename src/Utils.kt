@@ -32,6 +32,17 @@ enum class Direction {
     RIGHT,
 }
 
+
+/**
+ * Helper extension function to get the next direction when turning right.
+ */
+fun Direction.turnRight(): Direction = when (this) {
+    Direction.UP -> Direction.RIGHT
+    Direction.RIGHT -> Direction.DOWN
+    Direction.DOWN -> Direction.LEFT
+    Direction.LEFT -> Direction.UP
+}
+
 // find the GCD (Greatest Common Divisor)
 fun gcd(
     a: Long,
