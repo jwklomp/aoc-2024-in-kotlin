@@ -15,13 +15,11 @@ fun main() {
                 }
             }
 
-        fun generateOperatorCombinations(size: Int): List<List<String>> {
-            if (size == 0) return listOf(emptyList())
-            val smallerCombos = generateOperatorCombinations(size - 1)
-            return smallerCombos.flatMap { combo -> operators.map { combo + it } }
-        }
+        fun generateOperatorCombinations(size: Int): List<List<String>> =
+            (1..size).fold(listOf(emptyList<String>())) { acc, _ ->
+                acc.flatMap { combo -> operators.map { combo + it } }
+            }
 
-        // Check all combinations of operators
         val operatorCombinations = generateOperatorCombinations(numbers.size - 1)
         return operatorCombinations.any { ops ->
             evaluateLeftToRight(numbers, ops) == sum
