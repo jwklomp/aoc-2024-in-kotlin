@@ -1,3 +1,5 @@
+// TODO refactor see https://www.youtube.com/watch?v=ubz-Hm8Zci8
+
 fun removeDeactivatedPortions(input: String): String {
     var skip = false
     var index = 0

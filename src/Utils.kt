@@ -172,3 +172,9 @@ fun <T> List<List<T>>.windowed2D(size: Int): List<List<List<T>>> {
         }
     }
 }
+
+fun <T> List<T>.uniquePairs(): List<Pair<T, T>> {
+    return this.flatMapIndexed { index, first ->
+        this.subList(index + 1, this.size).map { second -> first to second }
+    }
+}

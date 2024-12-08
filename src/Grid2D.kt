@@ -14,6 +14,14 @@ class Grid2D<T>(private val grid: List<List<T>>) {
 
     fun getCell(x: Int, y: Int): Cell<T> = Cell(value = grid[y][x], x = x, y = y)
 
+    fun getCellOrNull(x: Int, y: Int): Cell<T>? {
+        return if (y in grid.indices && x in grid[y].indices) {
+            Cell(value = grid[y][x], x = x, y = y)
+        } else {
+            null
+        }
+    }
+
     fun getAllCells(): List<Cell<T>> =
         grid.flatMapIndexed { y, row -> row.mapIndexed { x, v -> Cell(value = v, x = x, y = y) } }
 

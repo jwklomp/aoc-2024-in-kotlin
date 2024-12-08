@@ -16,7 +16,7 @@ fun main() {
             }
 
         fun generateOperatorCombinations(size: Int): List<List<String>> =
-            (1..size).fold(listOf(emptyList<String>())) { acc, _ ->
+            (1..size).fold(listOf(emptyList())) { acc, _ ->
                 acc.flatMap { combo -> operators.map { combo + it } }
             }
 
