@@ -1,7 +1,7 @@
 data class Block(val len: Int, val id: Int) // -1 == empty
 
 fun main() {
-    fun moveBlocks(list: List<Block>): List<Int> {
+    fun movePerBlock(list: List<Block>): List<Int> {
         val expanded = list.flatMap { block -> List(block.len) { block.id } }
         val redistributed = generateSequence(expanded) { current ->
             val first = current.indexOfFirst { it == -1 }
@@ -19,8 +19,9 @@ fun main() {
         return redistributed
     }
 
-    fun moveFiles(blocks: List<Block>): List<Int> {
+    fun movePerFile(blocks: List<Block>): List<Int> {
         val expanded = blocks.flatMap { block -> List(block.len) { block.id } }
+
         // Get unique file IDs in decreasing order, ignoring empty blocks (-1)
         val fileIds = expanded.filter { it != -1 }.distinct().sortedDescending()
         val currentState = expanded.toMutableList()
@@ -35,9 +36,9 @@ fun main() {
             val targetStart = (0..currentState.size - fileLength).firstOrNull { start ->
                 currentState.subList(start, start + fileLength).all { it == -1 }
             }
+
             // only move if there is target start and target start is smaller than the current position
-            if (targetStart != null && targetStart < filePositions.minOrNull()!!) {
-                // Clear the current positions of the file
+            if (targetStart != null && targetStart < filePositions.min()) {
                 filePositions.forEach { currentState[it] = -1 }
                 repeat(fileLength) { i -> currentState[targetStart + i] = fileId }
             }
@@ -53,21 +54,19 @@ fun main() {
             Block(digit, id)
         }
 
+    fun checksum(result: List<Int>) = result
+        .withIndex()
+        .filter { it.value != -1 }
+        .fold(0L) { acc, (idx, block) -> acc + idx * block }
+
     fun part1(input: List<String>): Long {
-        val list = makeBlockList(input)
-        return moveBlocks(list)
-            .withIndex()
-            .filter { it.value != -1 }
-            .fold(0L) { acc, (idx, block) -> acc + idx * block }
+        val blocks = makeBlockList(input)
+        return checksum(movePerBlock(blocks))
     }
 
     fun part2(input: List<String>): Long {
         val blocks = makeBlockList(input)
-        val finalState = moveFiles(blocks)
-        return finalState
-            .withIndex()
-            .filter { it.value != -1 }
-            .fold(0L) { acc, (idx, block) -> acc + idx * block }
+        return checksum(movePerFile(blocks))
     }
 
     val testInput = readInput("Day09_test")
