@@ -1,64 +1,97 @@
-data class Block(val id: Int, val fileLength: Int, val freeLength: Int?)
-
-// TODO '99' can count is one block so need 2 spaces. Need to fix this
-fun blockToString(block: Block): String {
-    val (id, fileLength, freeLength) = block
-    return id.toString().repeat(fileLength) + ".".repeat(freeLength ?: 0)
-}
-
-fun compactString(input: String): String {
-    val builder = StringBuilder(input)
-
-    while (true) {
-        val firstDotIndex = builder.indexOf(".")
-        val lastNonDotIndex = builder.indexOfLast { it != '.' }
-
-        if (firstDotIndex == -1 || lastNonDotIndex == -1 || firstDotIndex >= lastNonDotIndex) {
-            break // No valid transformation possible
-        }
-
-        // Replace the first dot with the last non-dot character
-        val lastNonDotChar = builder[lastNonDotIndex]
-        builder.setCharAt(firstDotIndex, lastNonDotChar)
-
-        // Remove the last non-dot character
-        builder.deleteCharAt(lastNonDotIndex)
-    }
-
-    return builder.toString()
-}
+data class Block(val len: Int, val id: Int) // -1 == empty
 
 fun main() {
-    fun part1(input: List<String>): Long {
-        val blocks = input.first().chunked(2)
-            .mapIndexed { index, c ->
-                Block(
-                    index,
-                    c.substring(0, 1).toInt(),
-                    if (c.length == 2) c.substring(1, 2).toInt() else 0
-                )
-            }
-        blocks.takeLast(3).forEach { it.println() }
-        val exploded = blocks.joinToString("") { blockToString(it) }
-        exploded.length.println()
-        exploded.replace(".", "").length.println()
-        val compacted = compactString(exploded).replace(".", "")
-        compacted.length.println()
 
-        return compacted.chunked(1)
-            .mapIndexed { index, s -> index.toLong() * s.toInt() }
-            .sumOf { it }
+    fun calculate(list: List<Block>): Long {
+        val expanded = list.flatMap { block -> List(block.len) { block.id } }
+
+        val redistributed = generateSequence(expanded) { current ->
+            val first = current.indexOfFirst { it == -1 }
+            val last = current.indexOfLast { it != -1 }
+
+            if (first < last) {
+                current.toMutableList().also {
+                    it[first] = current[last]
+                    it[last] = -1
+                }
+            } else {
+                null
+            }
+        }.last()
+
+        return redistributed
+            .withIndex()
+            .filter { it.value != -1 }
+            .fold(0L) { acc, (idx, block) -> acc + idx * block }
     }
 
-    fun part2(input: List<String>): Int {
-        return input.size
+    fun part1(input: List<String>): Long {
+        val line = input.first()
+
+        val list = line.mapIndexed { idx, char ->
+            val digit = char.digitToInt()
+            val id = if (idx % 2 == 1) -1 else idx / 2 // space
+            Block(digit, id)
+        }
+        return calculate(list)
+    }
+
+    fun moveFiles(materialized: List<Int>): List<Int> {
+        // Get unique file IDs in decreasing order, ignoring empty blocks (-1)
+        val fileIds = materialized.filter { it != -1 }.distinct().sortedDescending()
+
+        // Mutable copy of the initial state
+        val currentState = materialized.toMutableList()
+
+        // Process each file ID
+        for (fileId in fileIds) {
+            // Get current positions of the file
+            val filePositions = currentState.withIndex().filter { it.value == fileId }.map { it.index }
+            val fileLength = filePositions.size
+
+            // Find the leftmost span of free blocks large enough to fit the file
+            val targetStart = (0..currentState.size - fileLength).firstOrNull { start ->
+                currentState.subList(start, start + fileLength).all { it == -1 }
+            }
+
+            if (targetStart != null) {
+                // Clear the current positions of the file
+                filePositions.forEach { currentState[it] = -1 }
+
+                // Move the file to the target position
+                repeat(fileLength) { i -> currentState[targetStart + i] = fileId }
+            }
+        }
+
+        return currentState
+    }
+
+
+    fun part2(input: List<String>): Long {
+        val line = input.first()
+
+        val blocks = line.mapIndexed { idx, char ->
+            val digit = char.digitToInt()
+            val id = if (idx % 2 == 1) -1 else idx / 2 // space
+            Block(digit, id)
+        }
+
+        val materialized = blocks.flatMap { block -> List(block.len) { block.id } }
+        val finalState = moveFiles(materialized)
+
+        finalState.joinToString("") { if (it == -1) "." else it.toString() }.println()
+
+        return finalState
+            .withIndex()
+            .filter { it.value != -1 }
+            .fold(0L) { acc, (idx, block) -> acc + idx * block }
     }
 
     val testInput = readInput("Day09_test")
-    part1(testInput).println()
-    //part2(testInput).println()
+    //part1(testInput).println()
+    part2(testInput).println()
 
     val input = readInput("Day09")
-    part1(input).println()
+    //part1(input).println()
     //part2(input).println()
 }
