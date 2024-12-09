@@ -1,10 +1,8 @@
 data class Block(val len: Int, val id: Int) // -1 == empty
 
 fun main() {
-
-    fun calculate(list: List<Block>): Long {
+    fun moveBlocks(list: List<Block>): List<Int> {
         val expanded = list.flatMap { block -> List(block.len) { block.id } }
-
         val redistributed = generateSequence(expanded) { current ->
             val first = current.indexOfFirst { it == -1 }
             val last = current.indexOfLast { it != -1 }
@@ -18,30 +16,14 @@ fun main() {
                 null
             }
         }.last()
-
         return redistributed
-            .withIndex()
-            .filter { it.value != -1 }
-            .fold(0L) { acc, (idx, block) -> acc + idx * block }
     }
 
-    fun part1(input: List<String>): Long {
-        val line = input.first()
-
-        val list = line.mapIndexed { idx, char ->
-            val digit = char.digitToInt()
-            val id = if (idx % 2 == 1) -1 else idx / 2 // space
-            Block(digit, id)
-        }
-        return calculate(list)
-    }
-
-    fun moveFiles(materialized: List<Int>): List<Int> {
+    fun moveFiles(blocks: List<Block>): List<Int> {
+        val expanded = blocks.flatMap { block -> List(block.len) { block.id } }
         // Get unique file IDs in decreasing order, ignoring empty blocks (-1)
-        val fileIds = materialized.filter { it != -1 }.distinct().sortedDescending()
-
-        // Mutable copy of the initial state
-        val currentState = materialized.toMutableList()
+        val fileIds = expanded.filter { it != -1 }.distinct().sortedDescending()
+        val currentState = expanded.toMutableList()
 
         // Process each file ID
         for (fileId in fileIds) {
@@ -49,16 +31,14 @@ fun main() {
             val filePositions = currentState.withIndex().filter { it.value == fileId }.map { it.index }
             val fileLength = filePositions.size
 
-            // Find the leftmost span of free blocks large enough to fit the file
+            // Find the left most span of free blocks large enough to fit the file
             val targetStart = (0..currentState.size - fileLength).firstOrNull { start ->
                 currentState.subList(start, start + fileLength).all { it == -1 }
             }
-
-            if (targetStart != null) {
+            // only move if there is target start and target start is smaller than the current position
+            if (targetStart != null && targetStart < filePositions.minOrNull()!!) {
                 // Clear the current positions of the file
                 filePositions.forEach { currentState[it] = -1 }
-
-                // Move the file to the target position
                 repeat(fileLength) { i -> currentState[targetStart + i] = fileId }
             }
         }
@@ -66,21 +46,24 @@ fun main() {
         return currentState
     }
 
-
-    fun part2(input: List<String>): Long {
-        val line = input.first()
-
-        val blocks = line.mapIndexed { idx, char ->
+    fun makeBlockList(input: List<String>): List<Block> =
+        input.first().mapIndexed { idx, char ->
             val digit = char.digitToInt()
             val id = if (idx % 2 == 1) -1 else idx / 2 // space
             Block(digit, id)
         }
 
-        val materialized = blocks.flatMap { block -> List(block.len) { block.id } }
-        val finalState = moveFiles(materialized)
+    fun part1(input: List<String>): Long {
+        val list = makeBlockList(input)
+        return moveBlocks(list)
+            .withIndex()
+            .filter { it.value != -1 }
+            .fold(0L) { acc, (idx, block) -> acc + idx * block }
+    }
 
-        finalState.joinToString("") { if (it == -1) "." else it.toString() }.println()
-
+    fun part2(input: List<String>): Long {
+        val blocks = makeBlockList(input)
+        val finalState = moveFiles(blocks)
         return finalState
             .withIndex()
             .filter { it.value != -1 }
@@ -88,10 +71,10 @@ fun main() {
     }
 
     val testInput = readInput("Day09_test")
-    //part1(testInput).println()
+    part1(testInput).println()
     part2(testInput).println()
 
     val input = readInput("Day09")
-    //part1(input).println()
-    //part2(input).println()
+    part1(input).println()
+    part2(input).println()
 }
