@@ -27,8 +27,7 @@ fun main() {
 
     fun calculateTrails(mapGrid: Grid2D<Int>): List<Trail> {
         val trailHeads = mapGrid.getAllCells().filter { it.value == 0 }
-        val allTrails = trailHeads.map { calculateTrailsForHead(mapGrid, it, listOf(it)) }.flatten()
-        return allTrails
+        return trailHeads.map { calculateTrailsForHead(mapGrid, it, listOf(it)) }.flatten()
     }
 
     fun part1(input: List<String>): Int {
