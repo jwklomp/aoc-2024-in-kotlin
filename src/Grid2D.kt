@@ -101,3 +101,93 @@ fun calculateShoelaceArea(cells: List<Cell<*>>): Double {
 
     return (abs(area) / 2.0)
 }
+
+/**
+ * Calculate the perimeter of a region efficiently.
+ * Each cell contributes 4 edges, and shared edges are subtracted.
+ */
+fun calculatePerimeter(grid: Grid2D<*>, region: List<Cell<*>>): Int {
+    var totalEdges = 0
+
+    for (cell in region) {
+        // Start with 4 edges per cell
+        totalEdges += 4
+
+        // Subtract edges shared with adjacent cells in the same region
+        val sharedEdges = grid.getAdjacent(cell.x, cell.y)
+            .count { it in region } // Count only adjacent cells that are part of the same region
+        totalEdges -= sharedEdges
+    }
+
+    return totalEdges
+}
+
+/**
+ * Function to find all connected areas (regions) with the same letter in the grid.
+ * It uses Depth First Search (DFS) to identify each connected component (region).
+ */
+fun <T> findNestedAreas(grid: Grid2D<T>): Map<T, List<Pair<List<Cell<T>>, Int>>> {
+    val visited = mutableSetOf<Cell<T>>()
+    val regions = mutableMapOf<T, MutableList<Pair<List<Cell<T>>, Int>>>()
+
+    fun dfs(cell: Cell<T>, region: MutableList<Cell<T>>) {
+        visited.add(cell)
+        region.add(cell)
+
+        // Explore adjacent cells with the same value
+        for (neighbor in grid.getAdjacent(cell.x, cell.y)) {
+            if (neighbor.value == cell.value && neighbor !in visited) {
+                dfs(neighbor, region)
+            }
+        }
+    }
+
+    for (cell in grid.getAllCells()) {
+        if (cell !in visited) {
+            val region = mutableListOf<Cell<T>>()
+            dfs(cell, region)
+            regions.getOrPut(cell.value) { mutableListOf() }.add(Pair(region, region.size))
+        }
+    }
+
+    return regions
+}
+
+/**
+ * Calculate the number of sides (straight lines) for a region.
+ * Each straight horizontal or vertical line segment is considered a side.
+ */
+fun calculateSides(grid: Grid2D<*>, region: List<Cell<*>>): Int {
+    var sides = 0
+
+    for (cell in region) {
+        // Get the adjacent cells
+        val adjacentCells = grid.getAdjacent(cell.x, cell.y)
+
+        // For each adjacent cell, check if it is outside the region
+        for (adjacent in adjacentCells) {
+            if (adjacent.value != cell.value) {
+                sides++ // This is a boundary, count as a side
+            }
+        }
+    }
+
+    return sides
+}
+
+
+
+
+/**
+ * Process the grid to calculate regions, areas (number of cells), and perimeters.
+ */
+fun <T> getRegionsWithData(grid: Grid2D<T>): List<Quadruple<T, Int, Int, Int>> {
+    val areas = findNestedAreas(grid) // Reuse the region-detection logic
+    return areas.flatMap { (value, regions) ->
+        regions.map { (regionCells, area) ->
+            val perimeter = calculatePerimeter(grid, regionCells) // Calculate the perimeter
+            val sides = calculateSides(grid, regionCells) // Calculate the number of sides
+            Quadruple(value, area, perimeter, sides)
+        }
+    }
+}
