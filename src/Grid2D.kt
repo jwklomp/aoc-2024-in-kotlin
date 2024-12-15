@@ -37,7 +37,7 @@ class Grid2D<T>(private val grid: List<List<T>>) {
     fun getCol(colNr: Int): List<Cell<T>> =
         getCellsFiltered { it.x == colNr }.sortedBy { it.y } // row: y variable,x fixed
 
-    fun isOnEdge(x: Int, y: Int) = x == 0 || y == 0 || x == rowLength - 1 || y ==  columnLength - 1
+    fun isOnEdge(x: Int, y: Int) = x == 0 || y == 0 || x == rowLength - 1 || y == columnLength - 1
 
     fun clone(transform: (Cell<T>) -> T): Grid2D<T> {
         val clonedGrid = grid.mapIndexed { y, row ->
@@ -74,7 +74,21 @@ class Grid2D<T>(private val grid: List<List<T>>) {
 
 data class Cell<T>(var value: T, val x: Int, val y: Int)
 
+enum class Border{
+    T, B, L, R
+}
+
+data class Bordered<T>(val id: T, val borders: MutableList<Border> = mutableListOf())
+
 typealias Node<T> = Cell<T>
+
+// used for the area and perimeter calculations
+data class AreaData<T>(
+    val id: T,
+    val area: Int,
+    val perimeter: Int,
+    val sides: Int
+)
 
 // Determine if two cells are direct neighbors
 fun <T> Cell<T>.isNeighborOf(u: Cell<T>): Boolean {
@@ -107,87 +121,105 @@ fun calculateShoelaceArea(cells: List<Cell<*>>): Double {
  * Each cell contributes 4 edges, and shared edges are subtracted.
  */
 fun calculatePerimeter(grid: Grid2D<*>, region: List<Cell<*>>): Int {
-    var totalEdges = 0
-
+    var totalCells = 0
     for (cell in region) {
         // Start with 4 edges per cell
-        totalEdges += 4
+        totalCells += 4
 
         // Subtract edges shared with adjacent cells in the same region
         val sharedEdges = grid.getAdjacent(cell.x, cell.y)
             .count { it in region } // Count only adjacent cells that are part of the same region
-        totalEdges -= sharedEdges
+        totalCells -= sharedEdges
     }
 
-    return totalEdges
+    return totalCells
 }
 
 /**
  * Function to find all connected areas (regions) with the same letter in the grid.
- * It uses Depth First Search (DFS) to identify each connected component (region).
  */
-fun <T> findNestedAreas(grid: Grid2D<T>): Map<T, List<Pair<List<Cell<T>>, Int>>> {
-    val visited = mutableSetOf<Cell<T>>()
-    val regions = mutableMapOf<T, MutableList<Pair<List<Cell<T>>, Int>>>()
-
-    fun dfs(cell: Cell<T>, region: MutableList<Cell<T>>) {
+fun findAreas(grid: Grid2D<Bordered<String>>): Map<String, List<List<Cell<Bordered<String>>>>> {
+    val visited = mutableSetOf<Cell<Bordered<String>>>()
+    fun dfs(cell: Cell<Bordered<String>>, region: MutableList<Cell<Bordered<String>>>) {
         visited.add(cell)
         region.add(cell)
 
-        // Explore adjacent cells with the same value
         for (neighbor in grid.getAdjacent(cell.x, cell.y)) {
-            if (neighbor.value == cell.value && neighbor !in visited) {
+            if (neighbor.value.id == cell.value.id && neighbor !in visited) {
                 dfs(neighbor, region)
             }
         }
     }
-
+    val regions = mutableMapOf<String, MutableList<List<Cell<Bordered<String>>>>>()
     for (cell in grid.getAllCells()) {
         if (cell !in visited) {
-            val region = mutableListOf<Cell<T>>()
+            val region = mutableListOf<Cell<Bordered<String>>>()
             dfs(cell, region)
-            regions.getOrPut(cell.value) { mutableListOf() }.add(Pair(region, region.size))
+            regions.computeIfAbsent(cell.value.id) { mutableListOf() }.add(region.sortedBy { it.x * 1000 + it.y })
         }
     }
-
     return regions
 }
-
 /**
- * Calculate the number of sides (straight lines) for a region.
- * Each straight horizontal or vertical line segment is considered a side.
+ * For an area calculate the number of uninterrupted outer border lines.
  */
-fun calculateSides(grid: Grid2D<*>, region: List<Cell<*>>): Int {
-    var sides = 0
-
-    for (cell in region) {
-        // Get the adjacent cells
-        val adjacentCells = grid.getAdjacent(cell.x, cell.y)
-
-        // For each adjacent cell, check if it is outside the region
-        for (adjacent in adjacentCells) {
-            if (adjacent.value != cell.value) {
-                sides++ // This is a boundary, count as a side
-            }
-        }
+fun calculateSides(grid: Grid2D<*>, region: List<Cell<Bordered<String>>>): Int {
+    region.forEach { cell ->
+        setBoundaryBorders(grid, cell, region)
     }
+    val rowsWithTopBorder = region.filter { Border.T in it.value.borders }.groupBy { it.y }
+    val rowsWithTopBorderGaps = calculateRowGaps(rowsWithTopBorder)
+    val rowsWithBottomBorder = region.filter { Border.B in it.value.borders }.groupBy { it.y }
+    val rowsWithBottomBorderGaps = calculateRowGaps(rowsWithBottomBorder)
 
-    return sides
+    val columnsWithLeftBorder = region.filter { Border.L in it.value.borders }.groupBy { it.x }
+    val columnsWithLeftBorderGaps = calculateColumnGaps(columnsWithLeftBorder)
+    val columnsWithRightBorder = region.filter { Border.R in it.value.borders }.groupBy { it.x }
+    val columnsWithRightBorderGaps = calculateColumnGaps(columnsWithRightBorder)
+
+    return rowsWithTopBorderGaps + rowsWithBottomBorderGaps + columnsWithLeftBorderGaps + columnsWithRightBorderGaps
 }
 
+private fun calculateColumnGaps(columnsWithLeftBorder: Map<Int, List<Cell<Bordered<String>>>>) =
+    columnsWithLeftBorder.map { (_, cells) ->
+        val yPositions = cells.map { it.y }.distinct()
+        val gaps = yPositions.windowed(2).count { (a, b) -> b - a > 1 }
+        gaps + 1
+    }.sum()
 
+private fun calculateRowGaps(rowsWithTopBorder: Map<Int, List<Cell<Bordered<String>>>>): Int {
+    val rowsWithTopBorderGaps = rowsWithTopBorder.map { (_, cells) ->
+        val xPositions = cells.map { it.x }.distinct()
+        val gaps = xPositions.windowed(2).count { (a, b) -> b - a > 1 }
+        gaps + 1
+    }.sum()
+    return rowsWithTopBorderGaps
+}
 
+fun setBoundaryBorders(grid: Grid2D<*>, cell: Cell<Bordered<String>>, region: List<Cell<Bordered<String>>>) {
+    val borders = listOfNotNull(
+        Border.T.takeIf { cell.y == 0 || grid.getCell(cell.x, cell.y - 1) !in region },
+        Border.B.takeIf { cell.y == grid.getNrOfColumns() - 1 || grid.getCell(cell.x, cell.y + 1) !in region },
+        Border.L.takeIf { cell.x == 0 || grid.getCell(cell.x - 1, cell.y) !in region },
+        Border.R.takeIf { cell.x == grid.getNrOfRows() - 1 || grid.getCell(cell.x + 1, cell.y) !in region }
+    )
+
+    if (borders.isNotEmpty()) {
+        cell.value.borders.addAll(borders)
+    }
+}
 
 /**
  * Process the grid to calculate regions, areas (number of cells), and perimeters.
  */
-fun <T> getRegionsWithData(grid: Grid2D<T>): List<Quadruple<T, Int, Int, Int>> {
-    val areas = findNestedAreas(grid) // Reuse the region-detection logic
-    return areas.flatMap { (value, regions) ->
-        regions.map { (regionCells, area) ->
-            val perimeter = calculatePerimeter(grid, regionCells) // Calculate the perimeter
-            val sides = calculateSides(grid, regionCells) // Calculate the number of sides
-            Quadruple(value, area, perimeter, sides)
+fun getRegionsWithData(grid: Grid2D<Bordered<String>>): List<AreaData<String>> {
+    val areas = findAreas(grid)
+    return areas.flatMap { (value, regionGroups) ->
+        regionGroups.map { regionCells ->
+            val area = regionCells.size
+            val perimeter = calculatePerimeter(grid, regionCells)
+            val sides = calculateSides(grid, regionCells)
+            AreaData(value, area, perimeter, sides)
         }
     }
 }

@@ -9,12 +9,6 @@ import kotlin.math.max
  */
 fun Any?.println() = println(this)
 
-data class Quadruple<A, B, C, D>(
-    val first: A,
-    val second: B,
-    val third: C,
-    val fourth: D
-)
 
 class FixedSizeQueue<T>(private val maxSize: Int) {
     private val queue = ArrayDeque<T>()
