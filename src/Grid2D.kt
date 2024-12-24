@@ -1,6 +1,6 @@
 import kotlin.math.abs
 
-class Grid2D<T>(private val grid: List<List<T>>) {
+class Grid2D<T>(private val grid: List<MutableList<T>>) {
     private val rowLength: Int = grid.first().size // corresponds to x
     private val columnLength: Int = grid.size // corresponds to y
 
@@ -13,6 +13,11 @@ class Grid2D<T>(private val grid: List<List<T>>) {
     fun getNrOfColumns(): Int = columnLength
 
     fun getCell(x: Int, y: Int): Cell<T> = Cell(value = grid[y][x], x = x, y = y)
+
+    // update the underlying grid value based on x and y coordinates and the new value
+    fun setCell(x: Int, y: Int, value: T) {
+        grid[y][x] = value
+    }
 
     fun getCellOrNull(x: Int, y: Int): Cell<T>? {
         return if (y in grid.indices && x in grid[y].indices) {
@@ -37,14 +42,13 @@ class Grid2D<T>(private val grid: List<List<T>>) {
     fun getCol(colNr: Int): List<Cell<T>> =
         getCellsFiltered { it.x == colNr }.sortedBy { it.y } // row: y variable,x fixed
 
-    fun isOnEdge(x: Int, y: Int) = x == 0 || y == 0 || x == rowLength - 1 || y == columnLength - 1
-
-    fun clone(transform: (Cell<T>) -> T): Grid2D<T> {
-        val clonedGrid = grid.mapIndexed { y, row ->
-            row.mapIndexed { x, v -> transform(Cell(value = v, x = x, y = y)) }
-        }
-        return Grid2D(clonedGrid)
+    // print the contents of the grid to the console separating lines by '\n'
+    fun printGrid() {
+        println(toString())
     }
+
+
+    fun isOnEdge(x: Int, y: Int) = x == 0 || y == 0 || x == rowLength - 1 || y == columnLength - 1
 
     fun <T> cellToId(c: Cell<T>): String = "x${c.x}-y${c.y}"
 
@@ -67,7 +71,7 @@ class Grid2D<T>(private val grid: List<List<T>>) {
 
     override fun toString(): String {
         return grid.joinToString(separator = "\n") { row ->
-            row.joinToString(separator = "\t") { it.toString() }
+            row.joinToString(separator = "") { it.toString() }
         }
     }
 }

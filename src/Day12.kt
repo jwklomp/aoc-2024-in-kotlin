@@ -1,6 +1,6 @@
 fun main() {
     fun makeGridBordered(input: List<String>): Grid2D<Bordered<String>> =
-        Grid2D(input.map { s -> s.chunked(1).map { Bordered(id = it) } })
+        Grid2D(input.map { s -> s.chunked(1).map { Bordered(id = it) }.toMutableList() })
 
     fun part1(input: List<String>): Int {
         val borderedGrid = makeGridBordered(input)

@@ -1,6 +1,6 @@
 fun main() {
     fun makeGrid(input: List<String>): Grid2D<String> =
-        Grid2D(input.filterNot(String::isEmpty).map { it.chunked(1) })
+        Grid2D(input.filterNot(String::isEmpty).map { it.chunked(1).toMutableList() })
 
     fun getPairNodes(
         grid: Grid2D<String>,

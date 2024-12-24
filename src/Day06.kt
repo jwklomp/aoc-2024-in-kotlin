@@ -9,7 +9,7 @@ fun main() {
     val startDirection = Direction.UP
 
     fun makeFloorGrid(input: List<String>): Grid2D<String> {
-        val chunked = input.filterNot { it.isEmpty() }.map { it.chunked(1) }
+        val chunked = input.filterNot { it.isEmpty() }.map { it.chunked(1).toMutableList() }
         return Grid2D(chunked)
     }
 

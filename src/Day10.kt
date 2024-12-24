@@ -2,7 +2,7 @@ private typealias Trail = List<Cell<Int>>
 fun main() {
 
     fun makeGrid(input: List<String>): Grid2D<Int> =
-        Grid2D(input.map { it.chunked(1).map { it.toInt() } })
+        Grid2D(input.map { it.chunked(1).map { it.toInt() }.toMutableList() })
 
     fun calculateTrailsForHead(mapGrid: Grid2D<Int>, trailHead: Cell<Int>, trail: Trail): List<Trail> {
         fun recurse(current: Cell<Int>, trail: Trail, validTrails: MutableList<Trail>, visited: MutableSet<Cell<Int>>) {
