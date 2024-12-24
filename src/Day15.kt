@@ -30,7 +30,6 @@ fun main() {
 
     fun part1(inputGrid: List<String>, inputMoves: List<String>): Long {
         val warehouse = makeGrid(inputGrid)
-        warehouse.toString().println()
         val moves = inputMoves.joinToString("").chunked(1)
         val robotCell = warehouse.getAllCells().first { it.value == "@" }
         doMoves(warehouse, robotCell, moves)
