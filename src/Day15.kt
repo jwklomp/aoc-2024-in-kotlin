@@ -32,18 +32,18 @@ fun main() {
         }
     }
 
-    fun moveCollectedCellsInColumn(
+    fun moveCellsByColumn(
         cells: List<Cell<String>>,
         warehouse: Grid2D<String>,
-        step: String
+        yOffset: Int
     ) {
-        val sortedCells = if (step == "v") cells.sortedBy { it.y } else cells.sortedByDescending { it.y }
-        val yOffset = if (step == "v") 1 else -1
-        sortedCells.forEach { c ->
-            warehouse.setCell(c.x, c.y + yOffset, c.value)
+        cells.forEach { c -> warehouse.setCell(c.x, c.y + yOffset, c.value) }
+        val oldYs = cells.map { it.y }
+        val newYs = cells.map { it.y + yOffset }
+        val yToClear = oldYs.filterNot { it in newYs }
+        yToClear.forEach { y ->
+            warehouse.setCell(cells.first().x, y, ".")
         }
-        //println("sortedCells for x ${sortedCells.first().x}: $sortedCells")
-        warehouse.setCell(sortedCells.first().x, sortedCells.first().y, ".")
     }
 
     tailrec fun doMoves(
@@ -68,7 +68,6 @@ fun main() {
     fun nextLeveBoxCells(current: Cell<String>, warehouse: Grid2D<String>, step: String): List<Cell<String>> {
         val yOffset = if (step == "v") 1 else -1
         val nextCell = warehouse.getCell(current.x, current.y + yOffset)
-
         return when (nextCell.value) {
             "[" -> listOf(nextCell, warehouse.getCell(current.x + 1, current.y + yOffset))
             "]" -> listOf(nextCell, warehouse.getCell(current.x - 1, current.y + yOffset))
@@ -90,58 +89,34 @@ fun main() {
 
     fun complexMove(robotCell: Cell<String>, warehouse: Grid2D<String>, step: String) {
         val cellsToMove = collectCellsToMove(warehouse, step, listOf(robotCell), mutableListOf(robotCell)).distinct()
-        //println("For robot cell ${robotCell.x},${robotCell.y} found $cellsToMove to move")
-
         val columns = cellsToMove.groupBy { it.x }
         val yOffset = if (step == "v") 1 else -1
 
-        val boundarySelector: (List<Cell<String>>) -> Int = if (step == "v") {
-            { cells -> cells.maxOf { it.y } }
-        } else {
-            { cells -> cells.minOf { it.y } }
+        val canDoMove = columns.all { (_, cells) ->
+            val nextCells = cells.map { warehouse.getCell(it.x, it.y + yOffset) }
+            nextCells.none { it.value == "#" }
         }
-
-        val canDoMove = columns.all { (x, cells) ->
-            val targetY = boundarySelector(cells) + yOffset
-            val cell = warehouse.getCell(x, targetY) // should never be null because of the borders
-            cell.value == "."
-        }
-        //println("For robot cell ${robotCell.x},${robotCell.y} can do move: $canDoMove")
-
-        // if all columns can move, then move all columns per column
         if (canDoMove) {
             columns.forEach { (_, cells) ->
-                val cellsInColumn = warehouse.getCol(cells.first().x)
-                    .filter { it.y in cells.minOf { it.y }..cells.maxOf { it.y } }
-                moveCollectedCellsInColumn(cellsInColumn, warehouse, step)
+                val sorted = if (step == "v") cells.sortedBy { it.y } else cells.sortedByDescending { it.y }
+                moveCellsByColumn(sorted, warehouse, yOffset)
             }
         }
     }
 
-    tailrec fun doExpandedMoves(
+    tailrec fun doExpandedGridMoves(
         warehouse: Grid2D<String>,
         robotCell: Cell<String>,
         moves: List<String>
     ) {
         if (moves.isEmpty()) return
-        val nrOfBoxesPre = Regex(Regex.escape("[]")).findAll(warehouse.toString()).count()
-        val warehouseStringPre = warehouse.toString()
         when (moves.first()) {
             ">" -> singleMove(warehouse.getRow(robotCell.y), robotCell, warehouse)
             "<" -> singleMove(warehouse.getRow(robotCell.y).reversed(), robotCell, warehouse)
             "v" -> complexMove(robotCell, warehouse, "v")
             "^" -> complexMove(robotCell, warehouse, "^")
         }
-
-        val nrOfBoxesPost = Regex(Regex.escape("[]")).findAll(warehouse.toString()).count()
-        if(nrOfBoxesPre != nrOfBoxesPost) {
-            println("Nr of boxes: $nrOfBoxesPre -> $nrOfBoxesPost")
-            println("Warehouse before:")
-            warehouseStringPre.println()
-            println("Move: ${moves.first()}")
-            warehouse.toString().println()
-        }
-        doExpandedMoves(warehouse, warehouse.getAllCells().first { it.value == "@" }, moves.drop(1))
+        doExpandedGridMoves(warehouse, warehouse.getAllCells().first { it.value == "@" }, moves.drop(1))
     }
 
     fun part1(inputGrid: List<String>, inputMoves: List<String>): Long {
@@ -154,23 +129,19 @@ fun main() {
 
     fun part2(inputGrid: List<String>, inputMoves: List<String>): Long {
         val warehouse = makeExpandedGrid(inputGrid)
-        warehouse.toString().println()
-        "".println()
         val moves = inputMoves.joinToString("").chunked(1)
         val robotCell = warehouse.getAllCells().first { it.value == "@" }
-        doExpandedMoves(warehouse, robotCell, moves)
-        val nrOfO = inputGrid.sumOf { it.count { c -> c == 'O' } }
-        println("Nr of O: $nrOfO")
+        doExpandedGridMoves(warehouse, robotCell, moves)
         return warehouse.getAllCells().filter { it.value == "[" }.sumOf { it.x + (it.y * 100L) }
     }
 
     val testGrid = readInput("Day15_test_grid")
     val testMoves = readInput("Day15_test_moves")
-    // part1(testGrid, testMoves).println()
+    part1(testGrid, testMoves).println()
     part2(testGrid, testMoves).println()
 
     val grid = readInput("Day15_grid")
     val moves = readInput("Day15_moves")
-    //part1(grid, moves).println()
+    part1(grid, moves).println()
     part2(grid, moves).println()
 }
